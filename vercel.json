@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/analyse.js": {
+      "maxDuration": 30
+    }
+  }
+}

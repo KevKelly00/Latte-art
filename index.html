@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Latte Art Coach</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a0a00;
+      color: #f5e6d3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #2d1500;
+      border-radius: 16px;
+      padding: 36px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 6px;
+      color: #f5c97a;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #c9a97a;
+      margin-bottom: 28px;
+    }
+
+    .upload-area {
+      border: 2px dashed #7a4a1a;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      margin-bottom: 20px;
+    }
+
+    .upload-area:hover { border-color: #f5c97a; }
+
+    .upload-area input { display: none; }
+
+    .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+    .upload-area p { color: #c9a97a; font-size: 0.95rem; }
+
+    #preview {
+      display: none;
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      max-height: 300px;
+      object-fit: cover;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #c47d2a;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #e08c30; }
+    button:disabled { background: #5a3a10; cursor: not-allowed; }
+
+    #progress {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+      color: #f5c97a;
+      font-size: 0.95rem;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 3px solid #7a4a1a;
+      border-top-color: #f5c97a;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #result { display: none; margin-top: 28px; }
+
+    .score-box {
+      background: #3d1f00;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .score-label { font-size: 0.9rem; color: #c9a97a; margin-bottom: 6px; }
+
+    .score-number {
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: #f5c97a;
+      line-height: 1;
+    }
+
+    .score-sub { font-size: 0.85rem; color: #a07040; margin-top: 4px; }
+
+    .tips-box {
+      background: #3d1f00;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .tips-box h3 {
+      color: #f5c97a;
+      margin-bottom: 14px;
+      font-size: 1rem;
+    }
+
+    .tips-box p, .tips-box li {
+      color: #e0c9a0;
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    .tips-box ul { padding-left: 18px; }
+    .tips-box li { margin-bottom: 8px; }
+
+    .try-again {
+      margin-top: 20px;
+      background: #3d1f00;
+      color: #f5c97a;
+    }
+
+    .try-again:hover { background: #4d2800; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>☕ Latte Art Coach</h1>
+    <p class="subtitle">Upload a photo of your latte art for instant feedback</p>
+
+    <div class="upload-area" onclick="document.getElementById('photoInput').click()">
+      <div class="upload-icon">📷</div>
+      <p>Tap to choose a photo</p>
+      <input type="file" id="photoInput" accept="image/*" onchange="handlePhoto(event)" />
+    </div>
+
+    <img id="preview" alt="Your latte art preview" />
+
+    <button id="analyseBtn" onclick="analyse()" disabled>Analyse My Latte Art</button>
+
+    <div id="progress">
+      <span class="spinner"></span> Analysing your latte art…
+    </div>
+
+    <div id="result">
+      <div class="score-box">
+        <div class="score-label">Your Score</div>
+        <div class="score-number" id="scoreNumber">—</div>
+        <div class="score-sub">out of 10</div>
+      </div>
+      <div class="tips-box">
+        <h3>💡 Tips for Next Time</h3>
+        <div id="tipsContent"></div>
+      </div>
+      <button class="try-again" onclick="resetApp()">Try Another Photo</button>
+    </div>
+  </div>
+
+  <script>
+    let currentFile = null;
+
+    function handlePhoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      currentFile = file;
+
+      const preview = document.getElementById('preview');
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+      document.getElementById('analyseBtn').disabled = false;
+      document.getElementById('result').style.display = 'none';
+    }
+
+    async function analyse() {
+      if (!currentFile) return;
+
+      document.getElementById('analyseBtn').disabled = true;
+      document.getElementById('progress').style.display = 'block';
+      document.getElementById('result').style.display = 'none';
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(',')[1];
+        const mediaType = currentFile.type;
+
+        try {
+          const response = await fetch('/api/analyse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64, mediaType })
+          });
+
+          const data = await response.json();
+
+          document.getElementById('progress').style.display = 'none';
+          document.getElementById('result').style.display = 'block';
+
+          if (data.score !== undefined) {
+            document.getElementById('scoreNumber').textContent = data.score;
+            document.getElementById('tipsContent').innerHTML = data.tipsHtml;
+          } else {
+            document.getElementById('scoreNumber').textContent = '?';
+            document.getElementById('tipsContent').innerHTML = '<p>Sorry, something went wrong. Please try again.</p>';
+          }
+
+          document.getElementById('analyseBtn').disabled = false;
+
+        } catch (err) {
+          document.getElementById('progress').style.display = 'none';
+          document.getElementById('analyseBtn').disabled = false;
+          alert('Something went wrong. Please try again.');
+        }
+      };
+
+      reader.readAsDataURL(currentFile);
+    }
+
+    function resetApp() {
+      currentFile = null;
+      document.getElementById('photoInput').value = '';
+      document.getElementById('preview').style.display = 'none';
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('analyseBtn').disabled = true;
+    }
+  </script>
+</body>
+</html>
