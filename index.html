@@ -41,6 +41,37 @@
       margin-bottom: 28px;
     }
 
+    /* Password screen */
+    #loginScreen { display: block; }
+
+    .login-box {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .login-box input {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 2px solid #7a4a1a;
+      background: #1a0a00;
+      color: #f5e6d3;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .login-box input:focus { border-color: #f5c97a; }
+
+    .error-msg {
+      color: #e07070;
+      font-size: 0.9rem;
+      text-align: center;
+      display: none;
+    }
+
+    /* Main app */
+    #appScreen { display: none; }
+
     .upload-area {
       border: 2px dashed #7a4a1a;
       border-radius: 12px;
@@ -52,11 +83,8 @@
     }
 
     .upload-area:hover { border-color: #f5c97a; }
-
     .upload-area input { display: none; }
-
     .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
-
     .upload-area p { color: #c9a97a; font-size: 0.95rem; }
 
     #preview {
@@ -161,35 +189,60 @@
     <h1>☕ Latte Art Coach</h1>
     <p class="subtitle">Upload a photo of your latte art for instant feedback</p>
 
-    <div class="upload-area" onclick="document.getElementById('photoInput').click()">
-      <div class="upload-icon">📷</div>
-      <p>Tap to choose a photo</p>
-      <input type="file" id="photoInput" accept="image/*" onchange="handlePhoto(event)" />
+    <!-- Password Screen -->
+    <div id="loginScreen">
+      <div class="login-box">
+        <input type="password" id="passwordInput" placeholder="Enter password" onkeydown="if(event.key==='Enter') checkPassword()" />
+        <button onclick="checkPassword()">Login</button>
+        <p class="error-msg" id="errorMsg">Incorrect password, try again</p>
+      </div>
     </div>
 
-    <img id="preview" alt="Your latte art preview" />
-
-    <button id="analyseBtn" onclick="analyse()" disabled>Analyse My Latte Art</button>
-
-    <div id="progress">
-      <span class="spinner"></span> Analysing your latte art…
-    </div>
-
-    <div id="result">
-      <div class="score-box">
-        <div class="score-label">Your Score</div>
-        <div class="score-number" id="scoreNumber">—</div>
-        <div class="score-sub">out of 10</div>
+    <!-- Main App -->
+    <div id="appScreen">
+      <div class="upload-area" onclick="document.getElementById('photoInput').click()">
+        <div class="upload-icon">📷</div>
+        <p>Tap to choose a photo</p>
+        <input type="file" id="photoInput" accept="image/*" onchange="handlePhoto(event)" />
       </div>
-      <div class="tips-box">
-        <h3>💡 Tips for Next Time</h3>
-        <div id="tipsContent"></div>
+
+      <img id="preview" alt="Your latte art preview" />
+
+      <button id="analyseBtn" onclick="analyse()" disabled>Analyse My Latte Art</button>
+
+      <div id="progress">
+        <span class="spinner"></span> Analysing your latte art…
       </div>
-      <button class="try-again" onclick="resetApp()">Try Another Photo</button>
+
+      <div id="result">
+        <div class="score-box">
+          <div class="score-label">Your Score</div>
+          <div class="score-number" id="scoreNumber">—</div>
+          <div class="score-sub">out of 10</div>
+        </div>
+        <div class="tips-box">
+          <h3>💡 Tips for Next Time</h3>
+          <div id="tipsContent"></div>
+        </div>
+        <button class="try-again" onclick="resetApp()">Try Another Photo</button>
+      </div>
     </div>
   </div>
 
   <script>
+    const APP_PASSWORD = 'latte123';
+
+    function checkPassword() {
+      const input = document.getElementById('passwordInput').value;
+      if (input === APP_PASSWORD) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appScreen').style.display = 'block';
+      } else {
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+      }
+    }
+
     let currentFile = null;
 
     function handlePhoto(event) {
