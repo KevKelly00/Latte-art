@@ -243,7 +243,10 @@
 
   <script>
     let currentFile = null;
-    let sessionPassword = null;
+    let sessionToken = null;
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
     // PASSWORD CHECK
     async function checkPassword() {
@@ -267,7 +270,8 @@
           btn.disabled = false;
           btn.textContent = 'Login';
         } else {
-          sessionPassword = input;
+          const data = JSON.parse(await response.text());
+          sessionToken = data.token;
           document.getElementById('loginScreen').style.display = 'none';
           document.getElementById('appScreen').style.display = 'block';
         }
@@ -282,6 +286,19 @@
     function handlePhoto(event) {
       const file = event.target.files[0];
       if (!file) return;
+
+      if (file.size > MAX_FILE_SIZE) {
+        alert('Photo must be under 10 MB. Please choose a smaller image.');
+        event.target.value = '';
+        return;
+      }
+
+      if (file.type && !ALLOWED_TYPES.includes(file.type)) {
+        alert('Please upload a JPEG, PNG, GIF, or WebP image.');
+        event.target.value = '';
+        return;
+      }
+
       currentFile = file;
 
       const preview = document.getElementById('preview');
@@ -316,7 +333,7 @@
         const response = await fetch('/api/analyse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64, mediaType, password: sessionPassword })
+          body: JSON.stringify({ image: base64, mediaType, token: sessionToken })
         });
 
         // Use text() then JSON.parse() - more reliable than response.json() on iOS
@@ -336,11 +353,23 @@
         if (data.score !== undefined) {
           document.getElementById('result').style.display = 'block';
           document.getElementById('scoreNumber').textContent = data.score;
-          document.getElementById('tipsContent').innerHTML = data.tipsHtml;
+          const tipsContent = document.getElementById('tipsContent');
+          tipsContent.innerHTML = '';
+          const ul = document.createElement('ul');
+          (data.tips || []).forEach(tip => {
+            const li = document.createElement('li');
+            li.textContent = tip;
+            ul.appendChild(li);
+          });
+          tipsContent.appendChild(ul);
         } else {
           document.getElementById('result').style.display = 'block';
           document.getElementById('scoreNumber').textContent = '?';
-          document.getElementById('tipsContent').innerHTML = '<p>Sorry, something went wrong. Please try again.</p>';
+          const errContent = document.getElementById('tipsContent');
+          errContent.innerHTML = '';
+          const p = document.createElement('p');
+          p.textContent = 'Sorry, something went wrong. Please try again.';
+          errContent.appendChild(p);
         }
 
         document.getElementById('analyseBtn').disabled = false;

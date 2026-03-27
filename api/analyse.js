@@ -1,18 +1,66 @@
+import { createHmac, timingSafeEqual } from 'crypto';
+
+// In-memory rate limiter (per serverless instance — best-effort, not perfect across cold starts)
+const rateLimitMap = new Map();
+const RATE_LIMIT = 10;          // max requests per IP
+const RATE_WINDOW = 60 * 1000;  // per minute
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown';
+}
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const windowStart = now - RATE_WINDOW;
+  const requests = (rateLimitMap.get(ip) || []).filter(t => t > windowStart);
+  requests.push(now);
+  rateLimitMap.set(ip, requests);
+  return requests.length > RATE_LIMIT;
+}
+
+function generateToken(secret) {
+  const timestamp = Date.now().toString();
+  const hmac = createHmac('sha256', secret).update(timestamp).digest('hex');
+  return `${timestamp}.${hmac}`;
+}
+
+function verifyToken(token, secret, maxAge = 24 * 60 * 60 * 1000) {
+  if (!token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [timestamp, hmac] = parts;
+  const expected = createHmac('sha256', secret).update(timestamp).digest('hex');
+  // Constant-time comparison to prevent timing attacks
+  if (expected.length !== hmac.length) return false;
+  if (!timingSafeEqual(Buffer.from(expected), Buffer.from(hmac))) return false;
+  if (Date.now() - parseInt(timestamp, 10) > maxAge) return false;
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image, mediaType, password, checkOnly } = req.body;
-
-  // Check password on the server where it's safe
-  if (password !== process.env.APP_PASSWORD) {
-    return res.status(401).json({ error: 'Incorrect password' });
+  const ip = getClientIp(req);
+  if (isRateLimited(ip)) {
+    return res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
   }
 
-  // If just checking password, return success immediately
+  const { image, mediaType, password, token, checkOnly } = req.body;
+  const secret = process.env.APP_PASSWORD;
+
+  // Login: validate password, return a signed session token
   if (checkOnly) {
-    return res.status(200).json({ ok: true });
+    if (password !== secret) {
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+    return res.status(200).json({ ok: true, token: generateToken(secret) });
+  }
+
+  // Analyse: validate session token instead of password
+  if (!verifyToken(token, secret)) {
+    return res.status(401).json({ error: 'Invalid or expired session' });
   }
 
   if (!image || !mediaType) {
@@ -28,7 +76,7 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: 'claude-opus-4-6',
         max_tokens: 1024,
         messages: [
           {
@@ -77,13 +125,12 @@ Keep tips friendly, specific and actionable for a home barista beginner.`
     const cleaned = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
 
-    // Handle non-coffee photo
     if (parsed.notCoffee) {
       return res.status(200).json({ notCoffee: true, message: parsed.message });
     }
 
-    const tipsHtml = '<ul>' + parsed.tips.map(t => `<li>${t}</li>`).join('') + '</ul>';
-    return res.status(200).json({ score: parsed.score, tipsHtml });
+    // Return tips as a plain array — client builds the HTML safely
+    return res.status(200).json({ score: parsed.score, tips: parsed.tips });
 
   } catch (err) {
     console.error(err);
