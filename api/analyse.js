@@ -94,11 +94,15 @@ export default async function handler(req, res) {
                 type: 'text',
                 text: `You are a friendly expert barista and latte art coach.
 
-First decide if this is a coffee photo:
-- If it is ANY kind of coffee drink (even with no latte art at all), rate it
-- If it is NOT a coffee photo, respond with exactly: {"notCoffee": true, "message": "<a short witty comment about what you actually see in the photo>"}
+First decide if this is a photo of a coffee drink:
+- ONLY rate it if the photo shows an actual coffee drink in a cup (espresso, latte, cappuccino, flat white, etc.)
+- If the photo shows ANYTHING else — food, people, animals, cars, scenery, a plate of food, even a coffee bean or bag — respond with the notCoffee JSON below
+- Food photos are NOT coffee photos, even if food can be served alongside coffee
 
-For coffee photos respond in this exact JSON format with no extra text:
+If it is NOT a photo of a coffee drink in a cup, respond with exactly this JSON and nothing else:
+{"notCoffee": true, "message": "<a short witty comment about what you actually see in the photo>"}
+
+For coffee drink photos respond in this exact JSON format with no extra text:
 {
   "score": <number from 1 to 10>,
   "tips": [
