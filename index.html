@@ -182,6 +182,19 @@
     }
 
     .try-again:hover { background: #4d2800; }
+
+    /* Not a coffee photo warning */
+    #notCoffeeMsg {
+      display: none;
+      background: #3d1000;
+      border: 1px solid #c47d2a;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      color: #f5c97a;
+      font-size: 0.9rem;
+      margin-top: 16px;
+    }
   </style>
 </head>
 <body>
@@ -193,7 +206,7 @@
     <div id="loginScreen">
       <div class="login-box">
         <input type="password" id="passwordInput" placeholder="Enter password" onkeydown="if(event.key==='Enter') checkPassword()" />
-        <button onclick="checkPassword()">Login</button>
+        <button id="loginBtn" onclick="checkPassword()">Login</button>
         <p class="error-msg" id="errorMsg">Incorrect password, try again</p>
       </div>
     </div>
@@ -207,6 +220,10 @@
       </div>
 
       <img id="preview" alt="Your latte art preview" />
+
+      <div id="notCoffeeMsg">
+        That doesn't look like a coffee photo — please upload a latte art image ☕
+      </div>
 
       <button id="analyseBtn" onclick="analyse()" disabled>Analyse My Latte Art</button>
 
@@ -230,35 +247,45 @@
   </div>
 
   <script>
-    
-    async function checkPassword() {
-  const input = document.getElementById('passwordInput').value;
-  if (!input) return;
-
-  try {
-    const response = await fetch('/api/analyse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: input, checkOnly: true })
-    });
-
-    if (response.status === 401) {
-        sessionPassword = input;
-      document.getElementById('errorMsg').style.display = 'block';
-      document.getElementById('passwordInput').value = '';
-    } else {
-        sessionPassword = input;
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('appScreen').style.display = 'block';
-    }
-  } catch (err) {
-    alert('Something went wrong. Please try again.');
-  }
-}
-
     let currentFile = null;
     let sessionPassword = null;
 
+    // PASSWORD CHECK
+    async function checkPassword() {
+      const input = document.getElementById('passwordInput').value;
+      if (!input) return;
+
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      btn.textContent = 'Checking…';
+
+      try {
+        const response = await fetch('/api/analyse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: input, checkOnly: true })
+        });
+
+        if (response.status === 401) {
+          // Wrong password — show error, do NOT save password
+          document.getElementById('errorMsg').style.display = 'block';
+          document.getElementById('passwordInput').value = '';
+          btn.disabled = false;
+          btn.textContent = 'Login';
+        } else {
+          // Correct password — save it and show the app
+          sessionPassword = input;
+          document.getElementById('loginScreen').style.display = 'none';
+          document.getElementById('appScreen').style.display = 'block';
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Login';
+        alert('Something went wrong. Please try again.');
+      }
+    }
+
+    // PHOTO SELECTION
     function handlePhoto(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -269,14 +296,17 @@
       preview.style.display = 'block';
       document.getElementById('analyseBtn').disabled = false;
       document.getElementById('result').style.display = 'none';
+      document.getElementById('notCoffeeMsg').style.display = 'none';
     }
 
+    // ANALYSE
     async function analyse() {
       if (!currentFile) return;
 
       document.getElementById('analyseBtn').disabled = true;
       document.getElementById('progress').style.display = 'block';
       document.getElementById('result').style.display = 'none';
+      document.getElementById('notCoffeeMsg').style.display = 'none';
 
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -291,14 +321,21 @@
           });
 
           const data = await response.json();
-
           document.getElementById('progress').style.display = 'none';
-          document.getElementById('result').style.display = 'block';
+
+          // Handle non-coffee photo
+          if (data.notCoffee) {
+            document.getElementById('notCoffeeMsg').style.display = 'block';
+            document.getElementById('analyseBtn').disabled = false;
+            return;
+          }
 
           if (data.score !== undefined) {
+            document.getElementById('result').style.display = 'block';
             document.getElementById('scoreNumber').textContent = data.score;
             document.getElementById('tipsContent').innerHTML = data.tipsHtml;
           } else {
+            document.getElementById('result').style.display = 'block';
             document.getElementById('scoreNumber').textContent = '?';
             document.getElementById('tipsContent').innerHTML = '<p>Sorry, something went wrong. Please try again.</p>';
           }
@@ -315,11 +352,13 @@
       reader.readAsDataURL(currentFile);
     }
 
+    // RESET
     function resetApp() {
       currentFile = null;
       document.getElementById('photoInput').value = '';
       document.getElementById('preview').style.display = 'none';
       document.getElementById('result').style.display = 'none';
+      document.getElementById('notCoffeeMsg').style.display = 'none';
       document.getElementById('analyseBtn').disabled = true;
     }
   </script>
