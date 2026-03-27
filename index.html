@@ -308,49 +308,53 @@
       document.getElementById('result').style.display = 'none';
       document.getElementById('notCoffeeMsg').style.display = 'none';
 
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target.result.split(',')[1];
-        const mediaType = currentFile.type;
+      try {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(currentFile);
+        });
 
-        try {
-          const response = await fetch('/api/analyse', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64, mediaType, password: sessionPassword })
-          });
+        const mediaType = currentFile.type || 'image/jpeg';
 
-          const data = await response.json();
-          document.getElementById('progress').style.display = 'none';
+        const response = await fetch('/api/analyse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, mediaType, password: sessionPassword })
+        });
 
-          // Handle non-coffee photo
-          if (data.notCoffee) {
-            document.getElementById('notCoffeeMsg').style.display = 'block';
-            document.getElementById('analyseBtn').disabled = false;
-            return;
-          }
+        const data = await response.json();
+        document.getElementById('progress').style.display = 'none';
 
-          if (data.score !== undefined) {
-            document.getElementById('result').style.display = 'block';
-            document.getElementById('scoreNumber').textContent = data.score;
-            document.getElementById('tipsContent').innerHTML = data.tipsHtml;
-          } else {
-            document.getElementById('result').style.display = 'block';
-            document.getElementById('scoreNumber').textContent = '?';
-            document.getElementById('tipsContent').innerHTML = '<p>Sorry, something went wrong. Please try again.</p>';
-          }
-
+        if (data.notCoffee) {
+          const msg = document.getElementById('notCoffeeMsg');
+          msg.textContent = data.message || "That doesn't look like a coffee photo ☕";
+          msg.style.display = 'block';
           document.getElementById('analyseBtn').disabled = false;
-
-        } catch (err) {
-          document.getElementById('progress').style.display = 'none';
-          document.getElementById('analyseBtn').disabled = false;
-          alert('Something went wrong. Please try again.');
+          return;
         }
-      };
 
-      reader.readAsDataURL(currentFile);
+        if (data.score !== undefined) {
+          document.getElementById('result').style.display = 'block';
+          document.getElementById('scoreNumber').textContent = data.score;
+          document.getElementById('tipsContent').innerHTML = data.tipsHtml;
+        } else {
+          document.getElementById('result').style.display = 'block';
+          document.getElementById('scoreNumber').textContent = '?';
+          document.getElementById('tipsContent').innerHTML = '<p>Sorry, something went wrong. Please try again.</p>';
+        }
+
+        document.getElementById('analyseBtn').disabled = false;
+
+      } catch (err) {
+        document.getElementById('progress').style.display = 'none';
+        document.getElementById('analyseBtn').disabled = false;
+        alert('Something went wrong: ' + err.message);
+      }
     }
+
+      
 
     // RESET
     function resetApp() {
