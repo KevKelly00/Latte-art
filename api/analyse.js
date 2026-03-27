@@ -3,7 +3,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image, mediaType } = req.body;
+  const { image, mediaType, password } = req.body;
+
+  // Check password on the server where it's safe
+  if (password !== process.env.APP_PASSWORD) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
 
   if (!image || !mediaType) {
     return res.status(400).json({ error: 'Missing image data' });
@@ -60,11 +65,8 @@ Keep tips friendly, specific and actionable for a home barista beginner.`
 
     const data = await response.json();
     const text = data.content[0].text.trim();
-
-    // Strip markdown code fences if present
     const cleaned = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
-
     const tipsHtml = '<ul>' + parsed.tips.map(t => `<li>${t}</li>`).join('') + '</ul>';
 
     return res.status(200).json({ score: parsed.score, tipsHtml });

@@ -230,18 +230,29 @@
   </div>
 
   <script>
-    const APP_PASSWORD = 'latte123';
+    
+    async function checkPassword() {
+  const input = document.getElementById('passwordInput').value;
+  if (!input) return;
 
-    function checkPassword() {
-      const input = document.getElementById('passwordInput').value;
-      if (input === APP_PASSWORD) {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('appScreen').style.display = 'block';
-      } else {
-        document.getElementById('errorMsg').style.display = 'block';
-        document.getElementById('passwordInput').value = '';
-      }
+  try {
+    const response = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: input, checkOnly: true })
+    });
+
+    if (response.status === 401) {
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('passwordInput').value = '';
+    } else {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = 'block';
     }
+  } catch (err) {
+    alert('Something went wrong. Please try again.');
+  }
+}
 
     let currentFile = null;
 
