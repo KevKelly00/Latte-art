@@ -308,10 +308,15 @@
       document.getElementById('result').style.display = 'none';
       document.getElementById('notCoffeeMsg').style.display = 'none';
 
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target.result.split(',')[1];
-        const mediaType = currentFile.type;
+      try {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(currentFile);
+        });
+
+        const mediaType = currentFile.type || 'image/jpeg';
 
         try {
           const response = await fetch('/api/analyse', {
