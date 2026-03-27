@@ -122,8 +122,10 @@ Keep tips friendly, specific and actionable for a home barista beginner.`
 
     const data = await response.json();
     const text = data.content[0].text.trim();
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
+    // Extract the JSON object from the response, ignoring any surrounding text or code fences
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON found in model response');
+    const parsed = JSON.parse(match[0]);
 
     if (parsed.notCoffee) {
       return res.status(200).json({ notCoffee: true, message: parsed.message });
