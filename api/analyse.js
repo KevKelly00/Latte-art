@@ -47,6 +47,9 @@ Respond in this exact JSON format with no extra text:
 }
 
 Score based on: symmetry, definition, complexity, milk texture and overall presentation.
+Be honest and critical - use the FULL range from 1 to 10. Most home barista attempts 
+should score between 3 and 6. Only award 7+ for genuinely impressive art with clear 
+patterns. Reserve 9-10 for near-professional quality. Do not be generous.
 Keep tips friendly, specific and actionable for a home barista beginner.`
               }
             ]
