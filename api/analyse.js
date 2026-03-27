@@ -6,11 +6,13 @@ export default async function handler(req, res) {
   const { image, mediaType, password } = req.body;
 
   // Check password on the server where it's safe
-  if (password !== process.env.APP_PASSWORD) {
+    if (password !== process.env.APP_PASSWORD) {
     return res.status(401).json({ error: 'Incorrect password' });
   }
-
-  if (!image || !mediaType) {
+    if (req.body.checkOnly) {
+        return res.status(200).json({ ok: true });
+  }
+  if (!req.body.checkOnly && (!image || !mediaType)) {
     return res.status(400).json({ error: 'Missing image data' });
   }
 
