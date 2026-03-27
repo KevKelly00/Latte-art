@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Latte Art Coach</title>
+  <title>Latte Art Coach - Fixed</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -308,15 +308,10 @@
       document.getElementById('result').style.display = 'none';
       document.getElementById('notCoffeeMsg').style.display = 'none';
 
-      try {
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result.split(',')[1]);
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsDataURL(currentFile);
-        });
-
-        const mediaType = currentFile.type || 'image/jpeg';
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(',')[1];
+        const mediaType = currentFile.type;
 
         try {
           const response = await fetch('/api/analyse', {
@@ -330,9 +325,9 @@
 
           // Handle non-coffee photo
           if (data.notCoffee) {
-            const msg = document.getElementById('notCoffeeMsg');
-            msg.textContent = data.message || "That doesn't look like a coffee photo — please upload a latte art image ☕";
-            msg.style.display = 'block';
+            document.getElementById('notCoffeeMsg').style.display = 'block';
+            document.getElementById('analyseBtn').disabled = false;
+            return;
           }
 
           if (data.score !== undefined) {
