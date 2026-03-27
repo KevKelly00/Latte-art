@@ -243,9 +243,11 @@
     });
 
     if (response.status === 401) {
+        sessionPassword = input;
       document.getElementById('errorMsg').style.display = 'block';
       document.getElementById('passwordInput').value = '';
     } else {
+        sessionPassword = input;
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appScreen').style.display = 'block';
     }
@@ -255,6 +257,7 @@
 }
 
     let currentFile = null;
+    let sessionPassword = null;
 
     function handlePhoto(event) {
       const file = event.target.files[0];
@@ -284,7 +287,7 @@
           const response = await fetch('/api/analyse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64, mediaType })
+            body: JSON.stringify({ image: base64, mediaType, password: sessionPassword })
           });
 
           const data = await response.json();
