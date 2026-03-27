@@ -3,16 +3,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { image, mediaType, password } = req.body;
+  const { image, mediaType, password, checkOnly } = req.body;
 
   // Check password on the server where it's safe
-    if (password !== process.env.APP_PASSWORD) {
+  if (password !== process.env.APP_PASSWORD) {
     return res.status(401).json({ error: 'Incorrect password' });
   }
-    if (req.body.checkOnly) {
-        return res.status(200).json({ ok: true });
+
+  // If just checking password, return success immediately
+  if (checkOnly) {
+    return res.status(200).json({ ok: true });
   }
-  if (!req.body.checkOnly && (!image || !mediaType)) {
+
+  if (!image || !mediaType) {
     return res.status(400).json({ error: 'Missing image data' });
   }
 
@@ -41,9 +44,13 @@ export default async function handler(req, res) {
               },
               {
                 type: 'text',
-                text: `You are a friendly expert barista and latte art coach. Analyse this photo of latte art.
+                text: `You are a friendly expert barista and latte art coach.
 
-Respond in this exact JSON format with no extra text:
+First decide if this is a coffee photo:
+- If it is ANY kind of coffee drink (even with no latte art at all), rate it
+- If it is NOT a coffee photo, respond with exactly: {"notCoffee": true, "message": "<a short witty comment about what you actually see in the photo>"}
+
+For coffee photos respond in this exact JSON format with no extra text:
 {
   "score": <number from 1 to 10>,
   "tips": [
@@ -54,8 +61,8 @@ Respond in this exact JSON format with no extra text:
 }
 
 Score based on: symmetry, definition, complexity, milk texture and overall presentation.
-Be honest and critical - use the FULL range from 1 to 10. Most home barista attempts 
-should score between 3 and 6. Only award 7+ for genuinely impressive art with clear 
+Be honest and critical - use the FULL range from 1 to 10. Most home barista attempts
+should score between 3 and 6. Only award 7+ for genuinely impressive art with clear
 patterns. Reserve 9-10 for near-professional quality. Do not be generous.
 Keep tips friendly, specific and actionable for a home barista beginner.`
               }
@@ -69,8 +76,13 @@ Keep tips friendly, specific and actionable for a home barista beginner.`
     const text = data.content[0].text.trim();
     const cleaned = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
-    const tipsHtml = '<ul>' + parsed.tips.map(t => `<li>${t}</li>`).join('') + '</ul>';
 
+    // Handle non-coffee photo
+    if (parsed.notCoffee) {
+      return res.status(200).json({ notCoffee: true, message: parsed.message });
+    }
+
+    const tipsHtml = '<ul>' + parsed.tips.map(t => `<li>${t}</li>`).join('') + '</ul>';
     return res.status(200).json({ score: parsed.score, tipsHtml });
 
   } catch (err) {

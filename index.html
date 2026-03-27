@@ -325,9 +325,9 @@
 
           // Handle non-coffee photo
           if (data.notCoffee) {
-            document.getElementById('notCoffeeMsg').style.display = 'block';
-            document.getElementById('analyseBtn').disabled = false;
-            return;
+            const msg = document.getElementById('notCoffeeMsg');
+            msg.textContent = data.message || "That doesn't look like a coffee photo — please upload a latte art image ☕";
+            msg.style.display = 'block';
           }
 
           if (data.score !== undefined) {
